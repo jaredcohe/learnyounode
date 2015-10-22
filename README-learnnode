@@ -1,0 +1,515 @@
+Learning NodeJS, mostly based on the framework in
+https://github.com/workshopper/learnyounode
+October 2015
+
+https://github.com/maxogden/art-of-node
+- read the readme.md file here
+
+https://www.youtube.com/watch?v=FqMIyTH9wSg&feature=iv&src_vid=ndKRjmA6WNA&annotation_id=annotation_2934154685
+~/Dropbox/Projects/node2-learn
+
+https://www.youtube.com/watch?v=obaSQBBWZLk
+http://nodecasts.net/episodes/5-thinking-asynchronously
+https://www.youtube.com/watch?v=XL-nCvj2DO0
+
+TCP/IP
+https://www.youtube.com/watch?v=gJ5h4_0mllI
+https://www.youtube.com/watch?v=HOaIqQAeaik
+
+
+- then do learnyounode
+http://nodeschool.io/#workshoppers
+
+
+http://requirebin.com/
+
+https://github.com/substack/stream-handbook#introduction
+
+stream-adventure
+
+-----
+
+
+learnyounode
+
+ex13
+
+Write an HTTP server that serves JSON data when it receives a GET request to the path '/api/parsetime'. Expect the request to contain a query string with a key 'iso' and an ISO-format time as the value.
+
+For example:
+
+  /api/parsetime?iso=2013-08-10T12:10:15.474Z
+
+The JSON response should contain only 'hour', 'minute' and 'second' properties. For example:
+
+    {
+      "hour": 14,
+      "minute": 23,
+      "second": 15
+    }
+
+Add second endpoint for the path '/api/unixtime' which accepts the same query string but returns UNIX epoch time in milliseconds (the number of milliseconds since 1 Jan 1970 00:00:00 UTC) under the property 'unixtime'. For example:
+
+    { "unixtime": 1376136615474 }
+
+Your server should listen on the port provided by the first argument to your program.
+
+var http = require('http'),
+    url = require('url');
+
+function getAndConvertDate(parsedData) {
+    return new Date(parsedData['query']['iso']);
+}
+
+function sendResponse(res, responseData) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.write(responseData);
+}
+
+var server = http.createServer(function (req, res) {
+
+    var parsedData = url.parse(req.url, true);
+
+    if ((parsedData['pathname'] == '/api/parsetime') && (req.method == 'GET')) {
+        var date = getAndConvertDate(parsedData);
+
+        var responseData = JSON.stringify({
+           "hour" : date.getHours(),
+           "minute" : date.getMinutes(),
+           "second" : date.getSeconds()
+        });
+        
+        sendResponse(res, responseData);
+    }
+
+    if ((parsedData['pathname'] == '/api/unixtime') && (req.method == 'GET')) {
+        var date = getAndConvertDate(parsedData);
+
+        var responseData = JSON.stringify({
+           "unixtime" : date.getTime()
+        });
+        
+        sendResponse(res, responseData);
+    }
+
+    res.end();  
+});
+
+server.listen(process.argv[2]);
+
+answer key:
+
+var http = require('http')
+    var url = require('url')
+
+function parsetime (time) {
+  return {
+    hour: time.getHours(),
+    minute: time.getMinutes(),
+    second: time.getSeconds()
+  }
+}
+
+function unixtime (time) {
+  return { unixtime : time.getTime() }
+}
+
+var server = http.createServer(function (req, res) {
+  var parsedUrl = url.parse(req.url, true)
+  var time = new Date(parsedUrl.query.iso)
+  var result
+
+  if (/^\/api\/parsetime/.test(req.url))
+    result = parsetime(time)
+  else if (/^\/api\/unixtime/.test(req.url))
+    result = unixtime(time)
+
+  if (result) {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify(result))
+  } else {
+    res.writeHead(404)
+    res.end()
+  }
+})
+server.listen(Number(process.argv[2]))
+
+
+ex12
+
+Write an HTTP server that receives only POST requests and converts incoming POST body characters to upper-case and returns it to the client.
+
+Your server should listen on the port provided by the first argument to your program.
+
+var http = require('http');
+var map = require('through2-map')
+var portNumber = process.argv[2];
+
+var server = http.createServer(function (request, response) {
+    if (request.method == 'POST') {                
+        request.pipe(map(function (chunk) {
+            return chunk.toString().toUpperCase();
+        })).pipe(response);
+    };
+});
+
+server.listen(portNumber);
+
+
+ex11
+
+Write an HTTP server that serves the same text file for each request it receives.
+
+Your server should listen on the port provided by the first argument to your program.
+
+You will be provided with the location of the file to serve as the second command-line argument. You must use the fs.createReadStream() method to stream the file contents to the response.
+
+var fs = require('fs');
+var http = require('http');
+var portNumber = process.argv[2];
+var fileLocation = process.argv[3];
+
+var server = http.createServer(function (request, response) {
+    res.writeHead(200, { 'content-type': 'text/plain' })
+    var fileReadStream = fs.createReadStream(fileLocation);
+    fileReadStream.pipe(response);
+});
+
+server.listen(portNumber);
+
+
+ex10
+
+Write a TCP time server!
+
+Your server should listen to TCP connections on the port provided by the first argument to your program. For each connection you must write the current date & 24 hour time in the format:
+
+    "YYYY-MM-DD hh:mm"
+
+followed by a newline character. Month, day, hour and minute must be zero-filled to 2 integers. For example:
+
+    "2013-07-06 17:42"
+    
+    var net = require('net');
+    var portNumber = process.argv[2];
+
+    var server = net.createServer(function (socket) {
+
+        var date = new Date();
+
+        var month = date.getMonth() + 1;
+        if (month < 10) {
+            month = "0" + month;
+        }
+
+        var day = date.getDate();
+        if (day < 10) {
+            day = "0" + day;
+        }
+
+        socket.write(
+            String(date.getFullYear()) + 
+            "-" +
+            String(month) +
+            "-" +
+            String(day) +
+            " " +
+            String(date.getHours()) +
+            ":" +
+            String(date.getMinutes())
+        )
+
+        socket.end();
+    })
+
+    server.listen(portNumber)
+
+    
+
+
+ex9
+
+// my bad answer, I didn't understand scope, you can use an array, not need hash
+
+var http = require('http')
+var urlsAndDataJSON = {
+        url1 : { url : process.argv[2], data : "" }
+    ,   url2 : { url : process.argv[3], data : "" }
+    ,   url3 : { url : process.argv[4], data : "" }
+}
+
+function printAll(dataJSON) {
+    console.log(dataJSON['url1']['data'])
+    console.log(dataJSON['url2']['data'])
+    console.log(dataJSON['url3']['data'])
+}
+
+function getUrlsAsync(data) {
+    
+    var counter = 0;
+
+    http.get(urlsAndDataJSON['url1']['url'], function(res){
+        res.setEncoding('utf8')
+        res.on('end', function () {
+            if (counter < 2) {
+                counter = counter + 1
+            }
+            else { 
+                printAll(urlsAndDataJSON)
+            }
+        })
+        res.on('data', function(data){
+            urlsAndDataJSON['url1']['data'] = urlsAndDataJSON['url1']['data'] + data
+        })
+    }).on('error', function(e) {
+        console.log("Got error: " + e.message);
+    })
+
+    http.get(urlsAndDataJSON['url2']['url'], function(res){
+        res.setEncoding('utf8')
+        res.on('end', function () {
+            if (counter < 2) {
+                counter = counter + 1
+            }
+            else { 
+                printAll(urlsAndDataJSON)
+            }
+        })
+        res.on('data', function(data){
+            urlsAndDataJSON['url2']['data'] = urlsAndDataJSON['url2']['data'] + data
+        })
+    }).on('error', function(e) {
+        console.log("Got error: " + e.message);
+    })
+
+    http.get(urlsAndDataJSON['url3']['url'], function(res){
+        res.setEncoding('utf8')
+        res.on('end', function () {
+            if (counter < 2) {
+                counter = counter + 1
+            }
+            else { 
+                printAll(urlsAndDataJSON)
+            }
+        })
+        res.on('data', function(data){
+            urlsAndDataJSON['url3']['data'] = urlsAndDataJSON['url3']['data'] + data
+        })
+    }).on('error', function(e) {
+        console.log("Got error: " + e.message);
+    })
+
+}
+
+getUrlsAsync(urlsAndDataJSON);
+
+// the right answer, answer key
+
+var http = require('http')
+var bl = require('bl')
+var results = []
+var count = 0
+
+function printResults () {
+  for (var i = 0; i < 3; i++)
+    console.log(results[i])
+}
+
+function httpGet (index) {
+  http.get(process.argv[2 + index], function (response) {
+    response.pipe(bl(function (err, data) {
+      if (err)
+        return console.error(err)
+
+      results[index] = data.toString()
+      count++
+
+      if (count == 3)
+        printResults()
+    }))
+  })
+}
+
+for (var i = 0; i < 3; i++)
+  httpGet(i)
+
+
+ex8
+
+var http = require('http')
+var url = process.argv[2]
+
+var allData = ""
+
+http.get(url, function(res) {
+    var allData = ""
+    //console.log('STATUS: ' + res.statusCode);
+    //console.log('HEADERS: ' + JSON.stringify(res.headers));
+    res.setEncoding("utf8")
+    res.on("end", function() {
+        console.log(allData.length)
+        console.log(allData)
+    })
+    res.on("data", function(data) {
+        allData = allData + data
+        //console.log(data)
+        //console.log("TKTK")
+    })
+})
+
+/* the answer
+var http = require('http')
+var bl = require('bl')
+    
+http.get(process.argv[2], function (response) {
+  response.pipe(bl(function (err, data) {
+    if (err)
+      return console.error(err)
+    data = data.toString()
+    console.log(data.length)
+    console.log(data)
+  }))  
+})
+*/
+
+
+ex7
+
+Write a program that performs an HTTP GET request to a URL provided to you as the first command-line argument. Write the String contents of each "data" event from the response to a new line on the console (stdout).
+
+var http = require('http')
+var url = process.argv[2]
+
+function callbackForGet(response) {
+    // gets the data in strings instead of buffer objects
+    response.setEncoding("utf8")
+    response.on("data", function(data){
+        console.log(data)
+    })
+}
+
+http.get(url, callbackForGet)
+
+/* answer from the tutorial
+var http = require('http')
+    
+http.get(process.argv[2], function (response) {
+  response.setEncoding('utf8')
+  response.on('data', console.log)
+  response.on('error', console.error)
+})
+*/
+
+
+ex6
+
+#program.js
+var readAndFilter = require('./readAndFilter')
+var directory = process.argv[2]
+var fileExtension = process.argv[3]
+
+function printOnePerLine(err, array) {
+    if (err)
+        return "ERROR is" + err
+    for (var i=0; i<array.length ; i++) {
+        console.log(array[i])
+    }
+}
+
+readAndFilter(directory, fileExtension, printOnePerLine)
+
+#readAndFilter.js
+var fs = require('fs')
+
+module.exports = function (directory, fileExtension, callback) {
+    fs.readdir(directory, function doneReading(err, fileArrayList) {
+        if (err)
+            return callback(err)
+        filteredList = fileArrayList.filter(function (item) {
+            return item.split(".")[1] === fileExtension
+        })
+        callback(null, filteredList)
+    })
+}
+
+
+
+
+
+ex5
+
+var fs = require('fs')
+var directory = process.argv[2]
+var fileExtension = process.argv[3]
+
+function filterList() {
+    fs.readdir(directory, function doneReading(err, fileArrayList) {
+
+        var filteredList = fileArrayList.filter(function (item) {
+            return item.split(".")[1] === fileExtension
+        })
+
+        printOnePerLine(filteredList)
+    })
+}
+
+function printOnePerLine(array) {
+    for (var i=0; i<array.length ; i++) {
+        console.log(array[i])
+    }
+}
+
+filterList()
+
+ex4
+
+var fs = require('fs')
+
+function countLines() {
+    fs.readFile(process.argv[2], function doneReading(err, fileContents) {
+
+        // convert Buffer array object to string and split string back into array on new lines
+        var arrayOfItems = fileContents.toString().split("\n")
+
+        // count items in array and subtract 1 for last new line character
+        var countOfItems = arrayOfItems.length - 1
+        
+        console.log(countOfItems)
+        
+    })
+}
+
+countLines()
+
+
+
+
+ex3
+
+// include fs module
+var fs = require('fs')
+
+// read file as a Buffer array object
+var buf = fs.readFileSync(process.argv[2])
+
+// convert Buffer array object to string and split string back into array on new lines
+var str = buf.toString()
+
+// split the array on new line characters
+var arrayofitems = str.split("\n")
+
+// count items in array and subtract 1 for last new line character
+var countofitems = arrayofitems.length - 1
+
+console.log(countofitems)
+
+
+ex2
+var sum = 0;
+for (var i=2; i<process.argv.length; i++) {
+    sum = sum + Number(process.argv[i]);
+}
+
+console.log(sum);
+
+
